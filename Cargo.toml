@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.0.0", features = ["full"] }
-bytes = "1"
+eyre = "0.6.12"
+tokio = { version = "1.39.1", features = ["rt", "macros", "net", "time", "io-util"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+lexopt = "0.3.0"
+bytes = "1.6.1"
