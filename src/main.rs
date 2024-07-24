@@ -9,7 +9,6 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     select,
 };
-use tracing_subscriber;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
