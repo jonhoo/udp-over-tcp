@@ -18,13 +18,13 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 lexopt = "0.3.0"
 bytes = "1.6.1"
 
+# TODO: watch out for https://github.com/axodotdev/cargo-dist/issues/253
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
 lto = "thin"
 
 # Config for 'cargo dist'
-# TODO: watch out for https://github.com/axodotdev/cargo-dist/issues/253
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.19.1"
@@ -36,5 +36,5 @@ installers = []
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # Publish jobs to run in CI
 pr-run-mode = "plan"
-# Produce GitHub Attestations
+# Whether to enable GitHub Attestations
 github-attestations = true
