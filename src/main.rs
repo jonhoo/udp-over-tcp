@@ -1,6 +1,7 @@
 use bytes::Buf;
 use eyre::WrapErr;
 use lexopt::prelude::*;
+use std::ffi::OsString;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::pin::Pin;
 use std::time::Duration;
@@ -18,26 +19,49 @@ async fn main() -> eyre::Result<()> {
         .init();
 
     let mut listen = false;
-    let mut tcp_port = None;
-    let mut udp_port = None;
-    let mut udp_dst = None;
+    let mut tcp_addr = None;
+    let mut udp_bind = None;
+    let mut udp_sendto = None;
 
     let mut parser = lexopt::Parser::from_env();
     while let Some(arg) = parser.next().wrap_err("parse arguments")? {
         match arg {
-            Short('l') => {
+            Long("tcp-listen") | Short('l') if tcp_addr.is_none() => {
                 listen = true;
+                tcp_addr = Some(
+                    parser
+                        .value()
+                        .wrap_err("value missing")
+                        .and_then(|v| port_or_addr(v, Ipv4Addr::UNSPECIFIED))
+                        .wrap_err("--tcp-listen")?,
+                );
             }
-            Value(port) if tcp_port.is_none() => {
-                tcp_port = Some(port.parse::<u16>().wrap_err("invalid tcp port")?);
+            Long("tcp-connect") | Short('t') if tcp_addr.is_none() => {
+                listen = false;
+                tcp_addr = Some(
+                    parser
+                        .value()
+                        .wrap_err("value missing")
+                        .and_then(|v| port_or_addr(v, Ipv4Addr::LOCALHOST))
+                        .wrap_err("--tcp-connect")?,
+                );
             }
-            Value(port) if udp_port.is_none() => {
-                udp_port = Some(port.parse::<u16>().wrap_err("invalid udp port")?);
+            Long("udp-bind") | Short('u') if udp_bind.is_none() => {
+                udp_bind = Some(
+                    parser
+                        .value()
+                        .wrap_err("value missing")
+                        .and_then(|v| port_or_addr(v, Ipv4Addr::UNSPECIFIED))
+                        .wrap_err("--udp-bind")?,
+                );
             }
-            Value(dst) if udp_dst.is_none() => {
-                udp_dst = Some(
-                    dst.parse::<SocketAddr>()
-                        .wrap_err("invalid forward destination")?,
+            Long("udp-sendto") | Short('p') if udp_sendto.is_none() => {
+                udp_sendto = Some(
+                    parser
+                        .value()
+                        .wrap_err("value missing")
+                        .and_then(|v| port_or_addr(v, Ipv4Addr::LOCALHOST))
+                        .wrap_err("--udp-sendto")?,
                 );
             }
             Short('h') | Long("help") => {
@@ -47,26 +71,24 @@ async fn main() -> eyre::Result<()> {
         }
     }
 
-    let Some(tcp_port) = tcp_port else {
-        eyre::bail!("no tcp port given");
+    let Some(tcp_addr) = tcp_addr else {
+        usage();
     };
-    let Some(udp_port) = udp_port else {
+    let Some(udp_bind) = udp_bind else {
         eyre::bail!("no udp port given");
     };
-    let Some(udp_dst) = udp_dst else {
+    let Some(udp_sendto) = udp_sendto else {
         eyre::bail!("no udp forward destination given");
     };
 
-    let udp_src = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), udp_port);
-    tracing::debug!("bind to udp {udp_src:?}");
-    let udp = tokio::net::UdpSocket::bind(udp_src)
+    tracing::debug!("bind to udp {udp_bind:?}");
+    let udp = tokio::net::UdpSocket::bind(udp_bind)
         .await
         .expect("udp-bind");
     let mut listener = if listen {
-        let tcp_src = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), tcp_port);
-        tracing::info!("bind to tcp {tcp_src:?}");
+        tracing::info!("bind to tcp {tcp_addr:?}");
         Some(
-            tokio::net::TcpListener::bind(tcp_src)
+            tokio::net::TcpListener::bind(tcp_addr)
                 .await
                 .expect("tcp-listen"),
         )
@@ -88,9 +110,8 @@ async fn main() -> eyre::Result<()> {
                     connect_again = None;
                 }
 
-                let tcp_dst = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), tcp_port);
-                tracing::debug!("connect to tcp {tcp_dst:?}");
-                tokio::net::TcpStream::connect(tcp_dst).await
+                tracing::debug!("connect to tcp {tcp_addr:?}");
+                tokio::net::TcpStream::connect(tcp_addr).await
             } else {
                 std::future::pending().await
             }
@@ -174,7 +195,7 @@ async fn main() -> eyre::Result<()> {
                     let msg = &tail[..len];
                     rest = &tail[len..];
                     tracing::trace!(n = len, "forward tcp packet to udp");
-                    if let Err(e) = udp.send_to(msg, udp_dst).await {
+                    if let Err(e) = udp.send_to(msg, udp_sendto).await {
                         tracing::error!("udp forward failed: {e}");
                     }
                 }
@@ -192,6 +213,51 @@ async fn main() -> eyre::Result<()> {
 }
 
 fn usage() -> ! {
-    eprintln!("udp-over-tcp [-l] <tcp port> <udp port> <udp dst>");
+    let bin = std::env::args()
+        .next()
+        .unwrap_or_else(|| String::from(env!("CARGO_BIN_NAME")));
+
+    eprintln!(
+        "{}",
+        concat!(env!("CARGO_BIN_NAME"), " ", env!("CARGO_PKG_VERSION"))
+    );
+    eprintln!("https://github.com/jonhoo/udp-over-tcp");
+    eprintln!();
+    eprintln!("You have a UDP application running on host X on port A.");
+    eprintln!("You want it to talk to a UDP application running on host Y on port B.");
+    eprintln!("Great, do as follows:");
+    eprintln!();
+    eprintln!("On either host (here X), first create a TCP tunnel to the other host:");
+    eprintln!();
+    eprintln!("    ssh -L 7878:127.0.0.1:7878 $Y");
+    eprintln!();
+    eprintln!("Next, run udp-over-tcp on both hosts, one with `--tcp-listen` and one with `--tcp-connect`.");
+    eprintln!("The `--tcp-listen` should be used on the host that the forwarding allows connecting _to_ (here Y).");
+    eprintln!("You can run them in either order, but best practice is to listen first:");
+    eprintln!();
+    eprintln!("    Y $ {bin} --tcp-listen  7878 --udp-bind $A --udp-sendto $B");
+    eprintln!("    X $ {bin} --tcp-connect 7878 --udp-bind $B --udp-sendto $A");
+    eprintln!();
+    eprintln!("On Y, this will listen on UDP port $A, forward those over TCP to X, and then deliver them to UDP port $A there.");
+    eprintln!("On X, this will listen on UDP port $B, forward those over TCP to Y, and then deliver them to UDP port $B there.");
+    eprintln!();
+    eprintln!("Now configure the application on X to send to 127.0.0.1:$B");
+    eprintln!("and configure the application on Y to send to 127.0.0.1:$A.");
+    eprintln!("In other words, same port, local IP address.");
+    eprintln!();
+    eprintln!("Each argument takes a port number (as above) or addr:port to specify the address.");
+    eprintln!("(address defaults to 0.0.0.0 for listen/bind and 127.0.0.1 for connect/sendto)");
     std::process::exit(0);
+}
+
+fn port_or_addr(arg: OsString, default_addr: Ipv4Addr) -> eyre::Result<SocketAddr> {
+    match arg.parse::<SocketAddr>() {
+        Ok(addr) => Ok(addr),
+        Err(_e) => match arg.parse::<u16>() {
+            Ok(port) => Ok(SocketAddr::new(IpAddr::V4(default_addr), port)),
+            Err(_e) => {
+                eyre::bail!("provided value is not an address or a port number");
+            }
+        },
+    }
 }
