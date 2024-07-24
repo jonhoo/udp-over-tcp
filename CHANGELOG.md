@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- A changelog!
-
 ### Changed
-
 
 ### Removed
 
+## [0.1.2] - 2024-07-24
+
+### Added
+
+- A changelog!
+- More helpful README (hopefully?)
 
 ## [0.1.1] - 2024-07-24
 
@@ -28,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/jonhoo/udp-over-tcp/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/jonhoo/udp-over-tcp/compare/v1.1.2...HEAD
+[0.1.2]: https://github.com/jonhoo/udp-over-tcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/jonhoo/udp-over-tcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jonhoo/udp-over-tcp/releases/tag/v0.1.0
