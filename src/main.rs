@@ -1,6 +1,8 @@
 use bytes::Buf;
 use std::collections::VecDeque;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::pin::Pin;
+use std::time::Duration;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     select,
@@ -60,23 +62,30 @@ async fn main() {
     } else {
         None
     };
-    let mut tcp = if listen {
-        None
-    } else {
-        Some(
-            tokio::net::TcpStream::connect(SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::LOCALHOST),
-                tcp_port,
-            ))
-            .await
-            .expect("tcp-connect"),
-        )
-    };
+    let mut tcp = None::<tokio::net::TcpStream>;
+    let mut connect_again = None::<Pin<Box<tokio::time::Sleep>>>;
 
-    let mut udp_buf = Vec::with_capacity(4096);
-    let mut tcp_buf = Vec::with_capacity(4096);
+    let mut udp_buf = Vec::with_capacity(65536);
+    let mut tcp_buf = Vec::with_capacity(65536);
 
     loop {
+        let has_tcp = tcp.is_some();
+        let connect_fut = async {
+            if !has_tcp && !listen {
+                if let Some(timeout) = &mut connect_again {
+                    timeout.await;
+                    connect_again = None;
+                }
+
+                tokio::net::TcpStream::connect(SocketAddr::new(
+                    IpAddr::V4(Ipv4Addr::LOCALHOST),
+                    tcp_port,
+                ))
+                .await
+            } else {
+                std::future::pending().await
+            }
+        };
         let listener_fut = async {
             if let Some(listener) = &mut listener {
                 listener.accept().await
@@ -93,21 +102,40 @@ async fn main() {
         };
 
         select! {
-            conn = listener_fut => {
+            conn = connect_fut, if !has_tcp && !listen => {
+                match conn {
+                    Ok(stream) => {
+                        eprintln!("established tcp connection");
+                        tcp = Some(stream);
+                        tcp_buf.clear();
+                    }
+                    Err(e) => {
+                        eprintln!("tcp connect failed: {e}");
+                        connect_again = Some(Box::pin(tokio::time::sleep(Duration::from_secs(1))));
+                    }
+                }
+            }
+            conn = listener_fut, if listen => {
                 let (conn, _addr) = conn.expect("tcp-accept");
-                eprintln!("replacing tcp connection");
+                if tcp.is_none() {
+                    eprintln!("accepted incoming tcp connection");
+                } else {
+                    eprintln!("replaced tcp connection");
+                }
                 tcp = Some(conn);
+                tcp_buf.clear();
             }
             msg = udp.recv_buf(&mut udp_buf) => {
-                if let Some(tcp) = &mut tcp {
+                if let Some(tcp_stream) = &mut tcp {
                     let _ = msg.expect("udp-recv");
                     let len = udp_buf.len() as u32;
-                    tcp
-                        .write_all_buf(
-                            &mut Buf::chain(&len.to_le_bytes()[..], &udp_buf[..])
-                        )
-                        .await
-                        .expect("tcp-write");
+                    if let Err(e) = tcp_stream.write_all_buf(&mut Buf::chain(&len.to_le_bytes()[..], &udp_buf[..])).await {
+                        eprintln!("tcp write failed: {e}");
+                        tcp = None;
+                    } else if let Err(e) = tcp_stream.flush().await {
+                        eprintln!("tcp flush failed: {e}");
+                        tcp = None;
+                    }
                     udp_buf.clear();
                 } else {
                     eprintln!("dropping udp packet without a tcp peer");
@@ -118,6 +146,7 @@ async fn main() {
                 if n == 0 {
                     eprintln!("tcp connection dropped");
                     tcp = None;
+                    continue;
                 }
                 let mut rest = &tcp_buf[..];
                 loop {
@@ -131,14 +160,16 @@ async fn main() {
                     }
                     let msg = &tail[..len];
                     rest = &tail[len..];
-                    udp.send_to(msg, udp_dst).await.expect("udp-send");
+                    if let Err(e) = udp.send_to(msg, udp_dst).await {
+                        eprintln!("udp send error: {e}");
+                    }
                 }
 
                 if rest.is_empty() {
                     tcp_buf.clear();
                 } else {
-                    let cp = Vec::from(rest);
-                    tcp_buf = cp;
+                    let keep = tcp_buf.len() - rest.len();
+                    tcp_buf.drain(..keep);
                 }
             }
         }
