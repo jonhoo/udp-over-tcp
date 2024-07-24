@@ -1,6 +1,6 @@
 [package]
 name = "udp-over-tcp"
-description = "Command-line tool for forwarding UDP datagrams over TCP."
+description = "Command-line tool for tunneling UDP datagrams over TCP."
 version = "0.1.1"
 edition = "2021"
 authors = ["Jon Gjengset <jon@thesquareplanet.com>"]

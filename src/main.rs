@@ -224,6 +224,7 @@ fn usage() -> ! {
     eprintln!();
     eprintln!("You have a UDP application running on host X on port A.");
     eprintln!("You want it to talk to a UDP application running on host Y on port B.");
+    eprintln!("And you also want to allow the application on Y to talk to A on X.");
     eprintln!("Great, do as follows:");
     eprintln!();
     eprintln!("On either host (here X), first create a TCP tunnel to the other host:");
