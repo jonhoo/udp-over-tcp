@@ -12,8 +12,14 @@ proxying so that UDP responses also end up in the right place (which
 can't to my knowledge be done even with multiple invocations of their
 `udp-over-tcp`).
 
+The program [comes pre-compiled][rel] for a number of platforms (thanks
+[cargo-dist]!), and should be executable out of the box with no
+dependencies.
+
 [so]: https://superuser.com/questions/53103/udp-traffic-through-ssh-tunnel/
 [mullvad]: https://github.com/mullvad/udp-over-tcp
+[rel]: https://github.com/jonhoo/udp-over-tcp/releases
+[cargo-dist]: https://opensource.axo.dev/cargo-dist/
 
 ## Usage
 
