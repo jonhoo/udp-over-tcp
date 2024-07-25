@@ -64,14 +64,14 @@ async fn main() -> eyre::Result<()> {
                 );
             }
             Short('h') | Long("help") => {
-                usage();
+                usage(0);
             }
             _ => return Err(arg.unexpected()).wrap_err("unexpected argument"),
         }
     }
 
     let Some(tcp_addr) = tcp_addr else {
-        usage();
+        usage(1);
     };
     let Some(udp_bind) = udp_bind else {
         eyre::bail!("no udp port given");
@@ -211,7 +211,7 @@ async fn main() -> eyre::Result<()> {
     }
 }
 
-fn usage() -> ! {
+fn usage(exit_with: i32) -> ! {
     let bin = std::env::args()
         .next()
         .unwrap_or_else(|| String::from(env!("CARGO_BIN_NAME")));
@@ -247,7 +247,7 @@ fn usage() -> ! {
     eprintln!();
     eprintln!("Each argument takes a port number (as above) or addr:port to specify the address.");
     eprintln!("(address defaults to 0.0.0.0 for listen/bind and 127.0.0.1 for connect/sendto)");
-    std::process::exit(0);
+    std::process::exit(exit_with);
 }
 
 fn port_or_addr(arg: OsString, default_addr: Ipv4Addr) -> eyre::Result<SocketAddr> {

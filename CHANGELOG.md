@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Exit with status code 1 on implicit help (i.e., no arguments).
+
 ### Removed
 
 ## [0.1.2] - 2024-07-24
