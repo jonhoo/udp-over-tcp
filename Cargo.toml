@@ -16,7 +16,7 @@ tokio = { version = "1.39.2", features = ["rt", "macros", "net", "time", "io-uti
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 lexopt = "0.3.0"
-bytes = "1.7.0"
+bytes = "1.7.2"
 
 # TODO: watch out for https://github.com/axodotdev/cargo-dist/issues/253
 # The profile that 'cargo dist' will build with
