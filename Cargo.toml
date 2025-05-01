@@ -12,10 +12,10 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 eyre = "0.6.12"
-tokio = { version = "1.39.2", features = ["rt", "macros", "net", "time", "io-util"] }
+tokio = { version = "1.44.2", features = ["rt", "macros", "net", "time", "io-util"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-lexopt = "0.3.0"
+lexopt = "0.3.1"
 bytes = "1.7.0"
 
 # TODO: watch out for https://github.com/axodotdev/cargo-dist/issues/253
