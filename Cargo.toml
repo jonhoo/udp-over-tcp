@@ -5,6 +5,7 @@ version = "0.1.6"
 edition = "2021"
 authors = ["Jon Gjengset <jon@thesquareplanet.com>"]
 repository = "https://github.com/jonhoo/udp-over-tcp"
+homepage = "https://github.com/jonhoo/udp-over-tcp"
 keywords = ["networking", "tcp", "udp"]
 categories = ["command-line-utilities", "network-programming"]
 rust-version = "1.70.0"
