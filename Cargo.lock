@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "udp-over-tcp"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "bytes",
  "eyre",
