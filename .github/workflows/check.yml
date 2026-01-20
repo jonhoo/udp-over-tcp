@@ -65,7 +65,7 @@ jobs:
     # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     strategy:
       matrix:
-        msrv: ["1.70.0"] # sparse registry
+        msrv: ["1.71.1"]
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # tag=v6.0.1
