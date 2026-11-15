@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Declared minimum supported Rust version is now 1.71.1, which is what
+  every `tokio` release allowed by our `tokio = "1.52.1"` requirement
+  needs; 1.70.0 was no longer actually buildable.
+
 ### Deprecated
 
 ### Removed
