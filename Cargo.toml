@@ -8,7 +8,7 @@ repository = "https://github.com/jonhoo/udp-over-tcp"
 homepage = "https://github.com/jonhoo/udp-over-tcp"
 keywords = ["networking", "tcp", "udp"]
 categories = ["command-line-utilities", "network-programming"]
-rust-version = "1.70.0"
+rust-version = "1.71.1"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
